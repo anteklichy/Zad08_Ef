@@ -1,73 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Zad08_Ef.Models;
 
-namespace Zad08_Ef.Context;
-
-public partial class ApbdContext : DbContext
+namespace Zad08_Ef.Context
 {
-    public ApbdContext()
+    public class ApbdContext : DbContext
     {
-    }
+        public DbSet<Trip> Trips { get; set; }
+        public DbSet<Client> Clients { get; set; }
+        public DbSet<ClientTrip> ClientTrips { get; set; }
+        public DbSet<Country> Countries { get; set; }
+        public DbSet<CountryTrip> CountryTrips { get; set; }
 
-    public ApbdContext(DbContextOptions<ApbdContext> options)
-        : base(options)
-    {
-    }
-
-    public virtual DbSet<Group> Groups { get; set; }
-
-    public virtual DbSet<Student> Students { get; set; }
-
-    public virtual DbSet<StudentGroup> StudentGroups { get; set; }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder
-            .UseSqlServer(
-                "Data Source=localhost;Initial Catalog=APBD;User Id=sa;Password=YourStrong!Passw0rd;Encrypt=False")
-            .LogTo(Console.WriteLine, LogLevel.Information);
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Group>(entity =>
+        public ApbdContext(DbContextOptions<ApbdContext> options) : base(options)
         {
-            entity.HasKey(e => e.IdGroup).HasName("Groups_pk");
+        }
 
-            entity.ToTable("Groups", "cw5");
-
-            entity.Property(e => e.Name).HasMaxLength(120);
-        });
-
-        modelBuilder.Entity<Student>(entity =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            entity.HasKey(e => e.IdStudent).HasName("Students_pk");
+            base.OnModelCreating(modelBuilder);
 
-            entity.ToTable("Students", "cw5");
+            modelBuilder.Entity<Trip>().ToTable("Trip");
+            modelBuilder.Entity<Client>().ToTable("Client");
+            modelBuilder.Entity<ClientTrip>().ToTable("Client_Trip");
+            modelBuilder.Entity<Country>().ToTable("Country");
+            modelBuilder.Entity<CountryTrip>().ToTable("Country_Trip");
 
-            entity.Property(e => e.FirstName).HasMaxLength(120);
-            entity.Property(e => e.LastName).HasMaxLength(120);
-        });
+            modelBuilder.Entity<ClientTrip>()
+                .HasKey(ct => new { ct.IdClient, ct.IdTrip });
 
-        modelBuilder.Entity<StudentGroup>(entity =>
-        {
-            entity.HasKey(e => new { e.IdStudent, e.IdGroup }).HasName("Student_Group_pk");
+            modelBuilder.Entity<ClientTrip>()
+                .HasOne(ct => ct.Client)
+                .WithMany(c => c.ClientTrips)
+                .HasForeignKey(ct => ct.IdClient);
 
-            entity.ToTable("Student_Group", "cw5");
+            modelBuilder.Entity<ClientTrip>()
+                .HasOne(ct => ct.Trip)
+                .WithMany(t => t.ClientTrips)
+                .HasForeignKey(ct => ct.IdTrip);
 
-            entity.Property(e => e.RegisteredAt).HasColumnType("datetime");
+            modelBuilder.Entity<CountryTrip>()
+                .HasKey(ct => new { ct.IdCountry, ct.IdTrip });
 
-            entity.HasOne(d => d.IdGroupNavigation).WithMany(p => p.StudentGroups)
-                .HasForeignKey(d => d.IdGroup)
-                .HasConstraintName("Student_Group_Group");
+            modelBuilder.Entity<CountryTrip>()
+                .HasOne(ct => ct.Country)
+                .WithMany(c => c.CountryTrips)
+                .HasForeignKey(ct => ct.IdCountry);
 
-            entity.HasOne(d => d.IdStudentNavigation).WithMany(p => p.StudentGroups)
-                .HasForeignKey(d => d.IdStudent)
-                .HasConstraintName("Student_Group_Student");
-        });
-
-        OnModelCreatingPartial(modelBuilder);
+            modelBuilder.Entity<CountryTrip>()
+                .HasOne(ct => ct.Trip)
+                .WithMany(t => t.CountryTrips)
+                .HasForeignKey(ct => ct.IdTrip);
+        }
     }
-
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
